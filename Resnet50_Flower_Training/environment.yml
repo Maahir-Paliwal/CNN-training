@@ -1,0 +1,4 @@
+name: Transferlearning
+channels:
+  - defaults
+prefix: /opt/anaconda3/envs/Transferlearning

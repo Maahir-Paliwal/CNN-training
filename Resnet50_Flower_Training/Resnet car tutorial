@@ -1,0 +1,70 @@
+IMAGE_SIZE = [224,224]
+
+from tensorflow.keras.layers import Input, Lambda, Dense, Flatten
+from tensorflow.keras.models import Model 
+from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img
+import numpy as np
+from glob import glob 
+import matplotlib.pyplot as plt 
+
+
+Train_folder = '/Users/maahirpaliwal/Downloads/archive/imgs_zip/output/train'
+Validation_folder = '/Users/maahirpaliwal/Downloads/archive/imgs_zip/output/val'
+
+myResnet = ResNet50(input_shape=IMAGE_SIZE + [3], weights = 'imagenet', include_top=False)
+
+
+for layer in myResnet.layers:
+    layer.trainable = False
+
+
+classes = glob('/Users/maahirpaliwal/Downloads/archive/imgs_zip/output/train/*')
+print(classes)
+
+classesNum = len(classes)
+print(classesNum)
+
+
+PlusFlattenlayer = Flatten()(myResnet.output)
+
+prediction = Dense(classesNum, activation='softmax')(PlusFlattenlayer)
+
+#create a new model including resnet and added last layer
+model = Model(inputs = myResnet.input, outputs = prediction)
+
+
+model.compile(
+    loss= 'categorical_crossentropy',
+    optimizer = 'adam',
+    metrics = ['accuracy'])
+
+
+train_datagen = ImageDataGenerator(rescale = 1. /255,
+                                   shear_range=0.2,
+                                   zoom_range=0.2,
+                                   horizontal_flip=True)
+
+test_datagen = ImageDataGenerator(rescale=1./ 255)
+
+training_set = train_datagen.flow_from_directory(Train_folder, target_size=(224,224), batch_size=32, class_mode='categorical')
+
+test_set = test_datagen.flow_from_directory(Validation_folder, target_size=(224,224), batch_size=32, class_mode='categorical')
+
+
+result = model.fit(training_set, 
+                   validation_data=test_set, 
+                   epochs=50, 
+                   steps_per_epoch=len(training_set), 
+                   validation_steps = len(test_set))
+
+plt.plot(result.history['accuracy'], label='train_acc')
+plt.plot(result.history['val_accuracy'], label='val_acc')
+plt.legend()
+plt.show()
+
+plt.plot(result.history['loss'], label='train_loss')
+plt.plot(result.history['val_loss'], label='val_loss')
+plt.legend()
+plt.show()
